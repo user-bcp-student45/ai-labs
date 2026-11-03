@@ -1,0 +1,49 @@
+Resumen del cambio
+
+- Migrar la transmisión del JOB JP1NST35 de XCOM a Sterling mediante la modificación de la CTL NSPPT35I.
+- Aplicativo: SAT. Responsable: Miguel Ortiz. QA: Marisol Quisocappa.
+
+Detalle Solución
+
+- Dentro del alcance
+  - Eliminar de la CTL NSPPT35I las sentencias XCOM.
+  - Incorporar la transmisión a Sterling con los nodos principales y secundarios.
+  - Incluir en la transmisión el archivo JSP1.NS.NS.PBC0.TARJETA.
+
+- Fuera del alcance
+  - La HU no especifica cambios en otros jobs, CTLs o archivos.
+
+- Riesgos y mitigaciones
+  - La modificación podría afectar la transmisión del archivo. Mitigación: validar la transmisión del archivo indicado y conservar la evidencia del resultado.
+  - Podrían quedar sentencias XCOM en la CTL modificada. Mitigación: revisar la CTL NSPPT35I y registrar el resultado de la revisión.
+
+- Preguntas abiertas
+  - ¿Cuáles son los nodos principales y secundarios que deben configurarse?
+  - ¿Qué criterios confirman que la transmisión a Sterling fue exitosa?
+  - ¿En qué entorno y con qué procedimiento se validará la transmisión?
+
+Componentes Impactados
+
+- Aplicativo SAT.
+- JOB JP1NST35.
+- CTL NSPPT35I.
+- Archivo a transmitir: JSP1.NS.NS.PBC0.TARJETA.
+
+Pruebas Sugeridas
+
+- Tech Lead
+  - Confirmar el alcance de la migración y la CTL afectada.
+  - Revisar que la solución considere los nodos principales y secundarios definidos.
+  - Revisar la evidencia de validación antes de dar por concluido el cambio.
+
+- Backend / Desarrollo
+  - Verificar la eliminación de las sentencias XCOM de NSPPT35I.
+  - Verificar la inclusión de la transmisión a Sterling y del archivo indicado.
+  - Revisar el cambio de la CTL y documentar el resultado.
+
+- QA
+  - Comprobar que la CTL modificada corresponda al JOB JP1NST35.
+  - Validar la transmisión del archivo a Sterling según los criterios y el entorno que se confirmen.
+  - Registrar el resultado de la prueba y las incidencias, si las hubiera.
+
+- Evidencia concreta: CTL NSPPT35I actualizada, checklist de revisión y resultado registrado de la validación de transmisión.

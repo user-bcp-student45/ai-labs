@@ -30,3 +30,29 @@
 
 - **H-API-01:** la API verifica tokens JWT con firma, algoritmo permitido, emisor, audiencia y claims obligatorios; los errores de token se devuelven con un mensaje generico. La coordinacion con el emisor externo y la configuracion previa al despliegue siguen pendientes.
 - **H-API-02:** las lecturas y creaciones derivan el owner de la identidad verificada; los valores `owner` enviados por query o cuerpo no otorgan acceso ni asignan propiedad.
+
+### Candidatos para revision humana
+
+#### H-API-08 — CORS permite origenes arbitrarios con credenciales
+- Estado: CANDIDATO
+- Evidencia: `api/app/main.py:57-62` configura `allow_origins=["*"]`, `allow_credentials=True` y permite cualquier metodo y header.
+- Impacto: cualquier origen web puede iniciar solicitudes cross-origin y, cuando presenta un token de acceso valido, leer respuestas de la API. Esto no elimina el requisito de autenticacion, pero deja sin restriccion de origen el acceso desde navegadores.
+- Prioridad propuesta: Baja; confirmar primero cuales son los origenes de frontend autorizados y el modelo de credenciales esperado.
+- Contrato potencialmente afectado: acceso desde navegador a `/api/tasks`, `/api/summary`, `/api/requirements` y `/api/backend-health`.
+- Como validarlo: enviar una solicitud preflight `OPTIONS` con un `Origin` no autorizado y verificar si la respuesta refleja ese origen y `Access-Control-Allow-Credentials: true`; repetir con el origen real del frontend y comparar el comportamiento esperado.
+
+#### H-API-09 — Subidas con el mismo nombre reemplazan el archivo anterior
+- Estado: CANDIDATO
+- Evidencia: `api/app/upload_service.py:35-39` construye la ruta de destino solo con el nombre normalizado y escribe con `Path.write_bytes`, que reemplaza el contenido existente.
+- Impacto: dos usuarios autenticados que suban un requisito con el mismo nombre comparten destino; la segunda subida puede sobrescribir el contenido de la primera, aunque la respuesta identifique un propietario distinto.
+- Prioridad propuesta: Media; depende de si los archivos deben conservarse por usuario o por carga.
+- Contrato potencialmente afectado: `POST /api/requirements`, en particular la correspondencia entre `owner`, `fileName`, `storedAt` y el contenido persistido.
+- Como validarlo: con un directorio temporal, subir secuencialmente el mismo nombre desde dos identidades con contenidos diferentes y comprobar si la primera carga sigue intacta; definir el comportamiento esperado (aislar, versionar o rechazar colisiones).
+
+#### H-API-10 — El API acepta estados y prioridades no definidos por las reglas del resumen
+- Estado: CANDIDATO
+- Evidencia: `api/app/models.py:6-11` declara `status` y `priority` como `str` sin restricciones; `api/app/services.py:8-9,58-62` solo identifica `HIGH` y estados cerrados `DONE`/`ARCHIVED`.
+- Impacto: `POST /api/tasks` puede persistir valores no reconocidos. Luego, `GET /api/summary` los cuenta como estados literales en `byStatus` y trata cualquier estado no cerrado como abierto, lo que puede producir métricas inconsistentes.
+- Prioridad propuesta: Media; confirmar el vocabulario de estados y prioridades requerido por el producto antes de restringir entradas.
+- Contrato potencialmente afectado: los valores aceptados por `POST /api/tasks` y la semantica de `byStatus` y `highPriorityOpen` en `GET /api/summary`.
+- Como validarlo: probar la creacion con estados y prioridades fuera de los valores usados por los datos iniciales y las reglas de resumen; observar respuesta y agregados, y acordar previamente si deben rechazarse o admitirse como valores extensibles.
