@@ -114,6 +114,44 @@ def test_task_access_is_bound_to_authenticated_identity(tmp_path: Path) -> None:
     assert created.json()["owner"] == "student"
 
 
+def test_sql_special_characters_are_treated_as_data(tmp_path: Path) -> None:
+    app = create_app(str(tmp_path / "workshop.db"), str(tmp_path / "uploads"))
+    unusual_username = "student' OR 1=1 --"
+    unusual_headers = headers(username=unusual_username)
+
+    with TestClient(app) as client:
+        initial_tasks = client.get("/api/tasks", headers=unusual_headers)
+        initial_summary = client.get("/api/summary", headers=unusual_headers)
+        created = client.post(
+            "/api/tasks",
+            headers=unusual_headers,
+            json={
+                "title": "O'Reilly",
+                "description": "' OR '1'='1 --",
+            },
+        )
+        tasks_after_create = client.get("/api/tasks", headers=unusual_headers)
+        regular_user_tasks = client.get("/api/tasks", headers=headers())
+        summary_after_create = client.get("/api/summary", headers=unusual_headers)
+
+    assert initial_tasks.status_code == 200
+    assert initial_tasks.json() == []
+    assert initial_summary.json() == {
+        "owner": unusual_username,
+        "total": 0,
+        "byStatus": {},
+        "highPriorityOpen": 0,
+    }
+    assert created.status_code == 201
+    assert created.json()["title"] == "O'Reilly"
+    assert created.json()["description"] == "' OR '1'='1 --"
+    assert created.json()["owner"] == unusual_username
+    assert len(tasks_after_create.json()) == 1
+    assert tasks_after_create.json()[0]["title"] == "O'Reilly"
+    assert len(regular_user_tasks.json()) == 2
+    assert summary_after_create.json()["total"] == 1
+
+
 def test_characterizes_summary_and_task_defaults(tmp_path: Path) -> None:
     app = create_app(str(tmp_path / "workshop.db"), str(tmp_path / "uploads"))
     with TestClient(app) as client:
